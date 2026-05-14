@@ -1,1 +1,285 @@
-<!DOCTYPE html><html><body><h1>Souvenir Wedding Ready</h1></body></html>
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Souvenir Wedding</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 25px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .result {
+      margin-top: 25px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.8;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stats {
+      line-height: 1.8;
+      font-size: 17px;
+    }
+
+    @media(max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card">
+    <h1>Cek Souvenir</h1>
+
+    <input type="text" id="nama" placeholder="Masukkan nama" />
+
+    <input type="text" id="kode" placeholder="Masukkan kode unik" />
+
+    <button onclick="cekSouvenir()">
+      Cek Souvenir
+    </button>
+
+    <div class="result" id="hasil"></div>
+  </div>
+
+  <div class="card">
+    <h1>Dashboard Admin</h1>
+
+    <div class="stats" id="stats"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Kode</th>
+          <th>Status</th>
+          <th>Waktu Ambil</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+
+const supabaseUrl = 'https://tkbvfpcqxdyrehfacebe.supabase.co'
+
+const supabaseKey = 'sb_publishable_ALQvUONN1ww8dEl6hmGM-A_F5dF2HFq'
+
+const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+async function cekSouvenir() {
+
+  const nama = document
+    .getElementById('nama')
+    .value
+    .trim()
+
+  const kode = document
+    .getElementById('kode')
+    .value
+    .trim()
+
+  const hasil = document.getElementById('hasil')
+
+  const { data, error } = await client
+    .from('tamu')
+    .select('*')
+    .ilike('nama', nama)
+    .eq('kode', kode)
+    .single()
+
+  if(error || !data) {
+
+    hasil.style.color = 'red'
+
+    hasil.innerHTML = `
+      ❌ Data tidak ditemukan
+    `
+
+    return
+  }
+
+  if(data.status === true) {
+
+    hasil.style.color = 'orange'
+
+    hasil.innerHTML = `
+      ⚠️ Souvenir sudah diambil
+      <br><br>
+      🕒 ${new Date(data.waktu_ambil).toLocaleString('id-ID')}
+    `
+
+    return
+  }
+
+  const now = new Date().toISOString()
+
+  await client
+    .from('tamu')
+    .update({
+      status: true,
+      waktu_ambil: now
+    })
+    .eq('id', data.id)
+
+  hasil.style.color = 'green'
+
+  hasil.innerHTML = `
+    ✅ Nama ditemukan
+    <br><br>
+    🎁 Silahkan Ambil Souvenir
+    <br><br>
+    🕒 ${new Date(now).toLocaleString('id-ID')}
+  `
+
+  loadGuests()
+}
+
+async function loadGuests() {
+
+  const { data } = await client
+    .from('tamu')
+    .select('*')
+    .order('id')
+
+  const tableBody = document.getElementById('tableBody')
+
+  tableBody.innerHTML = ''
+
+  let sudah = 0
+
+  data.forEach(item => {
+
+    if(item.status) sudah++
+
+    tableBody.innerHTML += `
+      <tr>
+        <td>${item.nama}</td>
+        <td>${item.kode}</td>
+        <td>
+          ${item.status ? '✅ Sudah Ambil' : '❌ Belum'}
+        </td>
+        <td>
+          ${item.waktu_ambil
+            ? new Date(item.waktu_ambil).toLocaleString('id-ID')
+            : '-'}
+        </td>
+      </tr>
+    `
+  })
+
+  document.getElementById('stats').innerHTML = `
+    <b>Total Tamu:</b> ${data.length}<br>
+    <b>Sudah Ambil:</b> ${sudah}<br>
+    <b>Belum Ambil:</b> ${data.length - sudah}
+  `
+}
+
+loadGuests()
+
+client
+  .channel('realtime-tamu')
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'tamu'
+    },
+    () => {
+      loadGuests()
+    }
+  )
+  .subscribe()
+
+</script>
+
+</body>
+</html>
+```
+
+# Cara Pakai
+
+1. Copy semua kode di atas
+2. Paste ke file:
+
+```txt
+index.html
+```
+
+3. Upload ulang ke GitHub
+4. Commit changes
+5. Tunggu 1 menit
+6. Refresh website
+
+🎉 Website realtime souvenir wedding langsung aktif.
