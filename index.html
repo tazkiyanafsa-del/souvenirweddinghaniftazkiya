@@ -93,12 +93,25 @@
 
 <body>
 
+<!-- Tambahkan password admin sederhana -->
+<script>
+const adminPassword = 'admin123'
+
+function bukaAdmin(){
+  const pass = prompt('Masukkan password admin')
+
+  if(pass === adminPassword){
+    document.getElementById('adminPanel').style.display = 'block'
+  } else {
+    alert('Password salah')
+  }
+}
+</script>
+
 <div class="container">
 
   <div class="card">
     <h1>Cek Souvenir</h1>
-
-    <input type="text" id="nama" placeholder="Masukkan nama" />
 
     <input type="text" id="kode" placeholder="Masukkan kode unik" />
 
@@ -106,10 +119,16 @@
       Cek Souvenir
     </button>
 
+    <br><br>
+
+    <button onclick="bukaAdmin()" style="background:#111;">
+      Admin
+    </button>
+
     <div class="result" id="hasil"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="adminPanel" style="display:none;">
     <h1>Dashboard Admin</h1>
 
     <div class="stats" id="stats"></div>
@@ -139,11 +158,6 @@ const client = supabase.createClient(supabaseUrl, supabaseKey)
 
 async function cekSouvenir() {
 
-  const nama = document
-    .getElementById('nama')
-    .value
-    .trim()
-
   const kode = document
     .getElementById('kode')
     .value
@@ -154,7 +168,6 @@ async function cekSouvenir() {
   const { data, error } = await client
     .from('tamu')
     .select('*')
-    .ilike('nama', nama)
     .eq('kode', kode)
     .single()
 
